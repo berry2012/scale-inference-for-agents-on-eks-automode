@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-mcp-server
+  labels:
+    app: calendar-mcp-server
+    component: mcp-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: calendar-mcp-server
+  template:
+    metadata:
+      labels:
+        app: calendar-mcp-server
+        component: mcp-server
+    spec:
+      containers:
+      - name: calendar-mcp-server
+        image: 520817024429.dkr.ecr.us-east-1.amazonaws.com/calendar-mcp-server:latest
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "8080"
+        - name: HOST
+          value: "0.0.0.0"
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3

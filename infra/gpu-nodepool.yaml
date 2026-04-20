@@ -1,0 +1,44 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu-general
+spec:
+  disruption:
+    budgets:
+    - nodes: 10%
+    consolidateAfter: 0s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  limits:
+    cpu: "1000"
+    memory: 1000Gi
+  template:
+    metadata:
+      labels:
+        owner: gpu-general
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: ebs-optimized
+      requirements:
+      - key: eks.amazonaws.com/instance-family
+        operator: In
+        values:
+        - g5
+        - g6
+        - g6e
+        - p5
+        - p4
+      - key: kubernetes.io/arch
+        operator: In
+        values:
+        - amd64
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values:
+        - on-demand
+      taints:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        value: Exists

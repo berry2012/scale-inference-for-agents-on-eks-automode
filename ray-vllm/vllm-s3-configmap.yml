@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vllm-serve-script
+data:
+  vllm_serve.py: |
+    import os
+    import re
+    import asyncio
+    from typing import Optional, List
+    from fastapi import FastAPI
+    from prometheus_client import make_asgi_app
+    from starlette.requests import Request
+    from starlette.responses import StreamingResponse, JSONResponse
+    from starlette.routing import Mount
+    from ray import serve
+
+    from vllm.engine.arg_utils import AsyncEngineArgs
+    from vllm.engine.async_llm_engine import AsyncLLMEngine
+    from vllm.entrypoints.openai.completion.protocol import CompletionRequest, CompletionResponse
+    from vllm.entrypoints.openai.chat_completion.protocol import ChatCompletionRequest, ChatCompletionResponse
+    from vllm.entrypoints.openai.engine.protocol import ErrorResponse
+    from vllm.entrypoints.openai.chat_completion.serving import OpenAIServingChat
+    from vllm.entrypoints.openai.completion.serving import OpenAIServingCompletion
+    from vllm.entrypoints.openai.models.protocol import BaseModelPath
+    from vllm.entrypoints.openai.models.serving import OpenAIServingModels
+    from vllm.logger import init_logger
+
+    logger = init_logger(__name__)
+    app = FastAPI()
+
+    @serve.deployment(
+        name="mistral-deployment",
+        ray_actor_options={"num_gpus": 1},
+        health_check_period_s=10
+    )
+    @serve.ingress(app)
+    class VLLMDeployment:
+        def __init__(
+            self,
+            model: str,
+            tensor_parallel_size: int,
+            max_num_seqs: int,
+            max_model_len: int,
+            response_role: str = "assistant",
+            chat_template: Optional[str] = None,
+        ):
+            # Setup vLLM metrics
+            route = Mount("/metrics", make_asgi_app())
+            route.path_regex = re.compile('^/metrics(?P<path>.*)')
+            app.routes.append(route)
+                     
+            logger.info("VLLMDeployment is initializing...")
+            self.model_path = model
+            
+            # Engine args 
+            engine_args = AsyncEngineArgs(
+                model=model,
+                tensor_parallel_size=tensor_parallel_size,
+                max_num_seqs=max_num_seqs,
+                max_model_len=max_model_len,
+                dtype="bfloat16",
+                trust_remote_code=True,
+                gpu_memory_utilization=0.9,
+                enable_chunked_prefill=True,
+            )
+
+            try:
+                self.engine = AsyncLLMEngine.from_engine_args(engine_args)
+                logger.info("VLLM Engine initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing VLLM engine: {str(e)}")
+                raise
+
+            self.response_role = response_role
+            self.chat_template = chat_template
+            self.openai_serving_chat = None
+            self.openai_serving_completion = None
+            self.serving_models = None
+
+        async def _init_openai_components(self):
+            """Initializes OpenAI serving components once engine config is available."""
+            if self.serving_models is not None:
+                return
+
+            base_model_paths = [BaseModelPath(name=self.model_path, model_path=self.model_path)]
+            
+            # v0.15.x uses OpenAIServingModels to manage model aliases and LoRA
+            self.serving_models = OpenAIServingModels(
+                engine_client=self.engine,
+                base_model_paths=base_model_paths,
+            )
+
+            self.openai_serving_completion = OpenAIServingCompletion(
+                engine_client=self.engine,
+                models=self.serving_models,
+                request_logger=None
+            )
+
+            self.openai_serving_chat = OpenAIServingChat(
+                engine_client=self.engine,
+                models=self.serving_models,
+                response_role=self.response_role,
+                request_logger=None,
+                chat_template=self.chat_template,
+                chat_template_content_format="string",
+                enable_auto_tools=os.environ.get("ENABLE_AUTO_TOOL_CHOICE", "false").lower() in ("1", "true", "yes"),
+                tool_parser=os.environ.get("TOOL_CALL_PARSER", "").strip() or None,
+                enable_prompt_tokens_details=False,
+            )
+
+        async def health_check(self):
+            return "OK"
+
+        @app.get("/v1/models")
+        async def get_models(self):
+            await self._init_openai_components()
+            models_list = await self.serving_models.show_available_models()
+            return JSONResponse(content=models_list.model_dump())
+
+        @app.post("/v1/completions")
+        async def create_completion(self, request: CompletionRequest, raw_request: Request):
+            await self._init_openai_components()
+            generator = await self.openai_serving_completion.create_completion(request, raw_request)
+            if isinstance(generator, ErrorResponse):
+                return JSONResponse(content=generator.model_dump(), status_code=generator.code)
+            if request.stream:
+                return StreamingResponse(content=generator, media_type="text/event-stream")
+            return JSONResponse(content=generator.model_dump())
+
+        @app.post("/v1/chat/completions")
+        async def create_chat_completion(self, request: ChatCompletionRequest, raw_request: Request):
+            await self._init_openai_components()
+            generator = await self.openai_serving_chat.create_chat_completion(request, raw_request)
+
+            if isinstance(generator, ErrorResponse):
+                return JSONResponse(content=generator.model_dump(), status_code=generator.code)
+            if request.stream:
+                return StreamingResponse(content=generator, media_type="text/event-stream")
+            return JSONResponse(content=generator.model_dump())
+
+    deployment = VLLMDeployment.bind(
+        model=os.environ.get('MODEL_ID', '/models/Ministral-3-8B-Instruct-2512'),
+        tensor_parallel_size=int(os.environ.get('TENSOR_PARALLEL_SIZE', '1')),
+        max_num_seqs=int(os.environ.get('MAX_NUM_SEQS', '32')),
+        max_model_len=int(os.environ.get('MAX_MODEL_LEN', '8192')),
+    )

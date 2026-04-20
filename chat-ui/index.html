@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SummitAssistant Chat</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <h1>SummitAssistant</h1>
+                </div>
+                <div class="status">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span class="status-text" id="statusText">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Container -->
+        <main class="chat-container">
+            <div class="messages" id="messages">
+                <!-- Welcome message -->
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            <p>Hello! I'm SummitAssistant, your AI-powered meeting management assistant.</p>
+                            <p>I can help you with:</p>
+                            <ul>
+                                <li>📅 Schedule meetings in Google Calendar</li>
+                                <li>📝 Summarize meeting notes</li>
+                                <li>🔍 Search and retrieve past meetings</li>
+                            </ul>
+                            <p>How can I assist you today?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                <div class="message-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                    </svg>
+                </div>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="input-area">
+            <div class="input-container">
+                <textarea 
+                    id="messageInput" 
+                    placeholder="Type your message here..." 
+                    rows="1"
+                    maxlength="2000"
+                ></textarea>
+                <button id="sendButton" class="send-button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <div class="input-footer">
+                <span class="char-count" id="charCount">0 / 2000</span>
+                <span class="hint">Press Enter to send, Shift+Enter for new line</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Quick Actions (Optional) -->
+    <div class="quick-actions" id="quickActions">
+        <button class="quick-action" data-action="schedule">
+            📅 Schedule Meeting
+        </button>
+        <button class="quick-action" data-action="summarize">
+            📝 Summarize Notes
+        </button>
+        <button class="quick-action" data-action="search">
+            🔍 Search Meetings
+        </button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

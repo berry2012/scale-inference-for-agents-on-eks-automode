@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: strands-weather-agent
+  template:
+    metadata:
+      labels:
+        app: strands-weather-agent
+    spec:
+      serviceAccountName: model-storage-sa
+      containers:
+      - name: strands-weather-agent
+        image: 520817024429.dkr.ecr.us-east-1.amazonaws.com/weather-agent:latest
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi        
+        ports:
+        - containerPort: 8000
+        env:
+        - name: BEDROCK_MODEL
+          value: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        - name: AWS_REGION
+          value: "us-east-1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: strands-weather-agent
+spec:
+  selector:
+    app: strands-weather-agent
+  ports:
+  - port: 80
+    targetPort: 8000
+  type: ClusterIP

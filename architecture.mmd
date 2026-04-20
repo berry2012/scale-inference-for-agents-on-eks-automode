@@ -1,0 +1,70 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#232F3E', 'primaryTextColor': '#fff', 'primaryBorderColor': '#FF9900', 'lineColor': '#FF9900', 'secondaryColor': '#1A1A2E', 'tertiaryColor': '#16213E', 'background': '#0D1117', 'mainBkg': '#232F3E', 'nodeBorder': '#FF9900', 'clusterBkg': '#161B22', 'clusterBorder': '#30363D', 'titleColor': '#FF9900', 'edgeLabelBackground': '#0D1117', 'textColor': '#C9D1D9'}}}%%
+
+graph TB
+    User["🧑‍💻 User / Demo Presenter"]
+    
+    subgraph EKS["Amazon EKS Auto Mode Cluster"]
+        direction TB
+        
+        subgraph Frontend["Frontend Layer"]
+            ChatUI["💬 Chat UI<br/><i>Streamlit • Port 8501</i>"]
+        end
+        
+        subgraph AgentLayer["Agent Layer"]
+            SummitAssistant["🤖 SummitAssistant Agent<br/><i>Strands Agents • Port 8080</i>"]
+            WeatherAgent["🌤️ Weather Agent<br/><i>Strands Agents • Port 80</i>"]
+        end
+        
+        subgraph MCPLayer["MCP Server Layer"]
+            CalendarMCP["📅 Calendar MCP Server<br/><i>FastAPI • Port 8080</i>"]
+            WeatherMCP["🌡️ Weather MCP Server<br/><i>FastAPI • Port 8080</i>"]
+        end
+        
+        subgraph LLMLayer["Self-Hosted LLM Layer"]
+            Ministral["🧠 Ministral-3-8B-Instruct-2512<br/><i>Ray Serve + vLLM • GPU</i>"]
+        end
+    end
+    
+    subgraph AWS["AWS Services"]
+        Bedrock["🧠 Amazon Bedrock<br/><i>Claude Sonnet 4</i>"]
+        S3["📦 Amazon S3<br/><i>Persistent Storage</i>"]
+        Cognito["🔐 Amazon Cognito<br/><i>User Authentication</i>"]
+        ALB["⚖️ Application Load Balancer<br/><i>HTTPS + Auth</i>"]
+    end
+    
+    subgraph External["External APIs"]
+        GoogleCal["📆 Google Calendar API"]
+        OpenMeteo["🌍 Open-Meteo API<br/><i>Weather Data</i>"]
+        Nominatim["📍 Nominatim<br/><i>Geolocation</i>"]
+    end
+    
+    User -->|"HTTPS"| ALB
+    ALB -->|"Auth"| Cognito
+    ALB -->|"HTTP"| ChatUI
+    ChatUI -->|"HTTP"| SummitAssistant
+    
+    SummitAssistant -->|"HTTP"| CalendarMCP
+    SummitAssistant -->|"HTTP<br/>Agent-to-Agent"| WeatherAgent
+    SummitAssistant -->|"API"| Bedrock
+    SummitAssistant -->|"API"| S3
+    
+    SummitAssistant -->|"OpenAI API"| Ministral
+    WeatherAgent -->|"OpenAI API"| Ministral
+    
+    WeatherAgent -->|"HTTP"| WeatherMCP
+    WeatherAgent -->|"API"| Bedrock
+    
+    CalendarMCP -->|"API"| GoogleCal
+    WeatherMCP -->|"API"| OpenMeteo
+    WeatherMCP -->|"API"| Nominatim
+
+    classDef eksNode fill:#232F3E,stroke:#FF9900,stroke-width:2px,color:#fff
+    classDef awsNode fill:#1A472A,stroke:#FF9900,stroke-width:2px,color:#fff
+    classDef extNode fill:#1A1A2E,stroke:#5865F2,stroke-width:2px,color:#C9D1D9
+    classDef userNode fill:#FF9900,stroke:#FF9900,stroke-width:2px,color:#232F3E
+    classDef clusterStyle fill:#161B22,stroke:#30363D,stroke-width:2px,color:#C9D1D9
+
+    class User userNode
+    class ChatUI,SummitAssistant,WeatherAgent,CalendarMCP,WeatherMCP,Ministral eksNode
+    class Bedrock,S3,Cognito,ALB awsNode
+    class GoogleCal,OpenMeteo,Nominatim extNode

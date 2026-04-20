@@ -1,0 +1,22 @@
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: ebs-optimized
+spec:
+  ephemeralStorage:
+    iops: 5000
+    size: 100Gi
+    throughput: 125
+  networkPolicy: DefaultAllow
+  networkPolicyEventLogs: Disabled
+  role: aiml-AmazonEKSAutoNodeRole
+  securityGroupSelectorTerms:
+  - tags:
+      Name: aiml-node
+  snatPolicy: Random
+  subnetSelectorTerms:
+  - tags:
+      Name: aiml-private*
+  tags:
+    Environment: dev
+    Team: data-engineering
