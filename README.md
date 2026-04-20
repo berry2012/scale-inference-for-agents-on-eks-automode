@@ -158,8 +158,8 @@ SummitAssistant → Presents to user
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd awslondonsummit2026-aws-village
+git clone https://github.com/berry2012/scale-inference-for-agents-on-eks-automode.git
+cd scale-inference-for-agents-on-eks-automode
 ```
 
 ### 2. Set Up Environment Variables
