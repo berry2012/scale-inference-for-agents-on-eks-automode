@@ -1,7 +1,7 @@
 
 # From Models to Agents: Running LLM-Powered AI Applications on Amazon EKS Auto Mode
 
-## ---- Amazon EKS Auto Mode ----
+## Objectives
 
 - GPU-optimized EKS Auto Mode cluster with NVIDIA device plugin support
 - Ray Serve orchestration for scalable distributed inference
@@ -10,7 +10,7 @@
 
 ## Architecture
 
-[image](./architecture.png)
+![agent-llm architecture](./architecture.png)
 
 ### Create the cluster
 
@@ -259,10 +259,22 @@ kubectl delete -f ray-vllm/ray-vllm-s3-service.yml
 kubectl delete -f ray-vllm/vllm-s3-configmap.yml 
 ```
 
-### Kiro and MCP Server
+### Troubleshoot with Kiro and MCP Server Demo
 
-k run frontend-app --image=nginzz 
+**Deploy sample pod**
 
+```bash
+kubectl run frontend-app --image=nginzz 
+```
+
+Verify the pods in the cluster
+
+```bash
+kubectl get pods
+```
+
+Sample prompt in Kiro IDE 
+
+```text
 I have an Amazon EKS Auto Mode cluster named `aiml` in the us-east-1 region. I observed that a pod is not running in the cluster. Use the Amazon EKS MCP Server, troubleshoot the pod that is not in running state and fix it. 
-
-kubectl get nodepool gpu-general
+```
